@@ -20,8 +20,20 @@ class Ethereum:
         x_in_bytes: bytes = x.to_bytes(32, byteorder='big')
         y_in_bytes: bytes = y.to_bytes(32, byteorder='big')
         # Ethereum public address is the last 20 bytes of the Keccak-256 hash of the public key
-        ethereum_address = '0x' + Ethereum.keccak256(x_in_bytes + y_in_bytes)[-20:].hex()
-        return ethereum_address
+        ethereum_address_in_bytes: bytes = Ethereum.keccak256(x_in_bytes + y_in_bytes)[-20:]
+        return Ethereum.checksum_ethereum_address(ethereum_address_in_bytes)
+
+    @staticmethod
+    def checksum_ethereum_address(ethereum_address_in_bytes: bytes) -> str:
+        # Ref: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md
+        ethereum_address_in_str: str = '0x'
+        hashed_address: bytes = Ethereum.keccak256(ethereum_address_in_bytes.hex().encode(encoding='ascii'))
+        for ch, hash in zip(ethereum_address_in_bytes.hex(), hashed_address.hex()):
+            if hash in ['8', '9', 'a', 'b', 'c', 'd', 'e', 'f']:
+                ethereum_address_in_str += ch.upper()
+            else:
+                ethereum_address_in_str += ch
+        return ethereum_address_in_str
 
     @staticmethod
     def generate_wallet(mnemonics: list[str]) -> any:

@@ -33,13 +33,15 @@ class Bip32:
 
         for index in paths:
             if index & Bip32.HARDENED_INDEX:
-                payload: bytes = hmac.new(key=chain_code, msg=b'\x00' + private_key + index.to_bytes(4, 'big'),
+                payload: bytes = hmac.new(key=chain_code,
+                                          msg=b'\x00' + private_key + index.to_bytes(4, byteorder='big'),
                                           digestmod=hashlib.sha512).digest()
                 child_private = coincurve.PrivateKey(payload[:32]).add(private_key)
                 chain_code, private_key = payload[32:], child_private.secret
             else:
                 public_key: bytes = coincurve.PublicKey.from_secret(private_key).format()
-                payload: bytes = hmac.new(key=chain_code, msg=public_key + index.to_bytes(4, 'big'),
+                payload: bytes = hmac.new(key=chain_code,
+                                          msg=public_key + index.to_bytes(4, byteorder='big'),
                                           digestmod=hashlib.sha512).digest()
                 child_private = coincurve.PrivateKey(payload[:32]).add(private_key)
                 chain_code, private_key = payload[32:], child_private.secret
