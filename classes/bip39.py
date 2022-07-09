@@ -198,37 +198,36 @@ class Bip39:
     @staticmethod
     def mnemonics_to_seed(mnemonics: list[str], passphrase: str = '') -> bytes:
         # Ref: https://medium.com/coinmonks/mnemonic-generation-bip39-simply-explained-e9ac18db9477
-        assert len(mnemonics) == 24 or len(mnemonics) == 12
 
-        # Convert Bip39.WORDS into a dict
+        # Convert WORDS into an index dict
         assert len(Bip39.WORDS) == 2 ** 11 == 2048
         word_map: dict[str, int] = {}
         for index, word in enumerate(Bip39.WORDS):
             word_map[word] = index
 
-        # Convert mnemonics into 256-bit entropy + 8-bit chksum, or alternatively 128-bit entropy + 4-bit chksum
+        # Convert 24 mnemonic words (24 * 11 = 264 bits) into 256-bit entropy + 8-bit chksum, or alternatively
+        #         12 mnemonic words (12 * 11 = 132 bits) into 128-bit entropy + 4-bit chksum
+        # Ref: https://en.bitcoin.it/wiki/BIP_0039
         entropy_and_chksum_in_bin: str = ''
         for word in mnemonics:
             index = word_map[word]
             entropy_and_chksum_in_bin += bin(index).lstrip('0b').zfill(11)
-        if len(mnemonics) == 24:
-            assert len(entropy_and_chksum_in_bin) == 256 + 8
-            entropy_in_bin = entropy_and_chksum_in_bin[:-8]
-            chksum_in_bin = entropy_and_chksum_in_bin[-8:]
-            entropy: bytes = int(entropy_in_bin, base=2).to_bytes(32, byteorder='big')
-        elif len(mnemonics) == 12:
-            assert len(entropy_and_chksum_in_bin) == 128 + 4
-            entropy_in_bin = entropy_and_chksum_in_bin[:-4]
-            chksum_in_bin = entropy_and_chksum_in_bin[-4:]
-            entropy: bytes = int(entropy_in_bin, base=2).to_bytes(16, byteorder='big')
-        else:
-            raise NotImplementedError
+        chksum_len_in_bits: int = len(entropy_and_chksum_in_bin) % 16
+        entropy_len_in_bits: int = len(entropy_and_chksum_in_bin) - chksum_len_in_bits
+        assert chksum_len_in_bits > 0
+        assert entropy_len_in_bits > 0
+        chksum_in_bin: str = entropy_and_chksum_in_bin[-chksum_len_in_bits:]
+        entropy_in_bin: str = entropy_and_chksum_in_bin[:-chksum_len_in_bits]
+        entropy: bytes = int(entropy_in_bin, base=2).to_bytes(entropy_len_in_bits // 8, byteorder='big')
+
         # Verify chksum equals to the first n-bits of SHA256(entropy)
         chksum2: bytes = hashlib.sha256(entropy).digest()
-        chksum2_in_bin = bin(chksum2[0]).lstrip('0b').zfill(8)
+        chksum2_in_bin: str = ''
+        for b in chksum2:
+            chksum2_in_bin += bin(b).lstrip('0b').zfill(8)
         assert chksum2_in_bin.startswith(chksum_in_bin)
 
-        # Generate seed
+        # Generate 512-bit seed
         mnemonics_in_str: str = ' '.join(mnemonics)
         salt: str = 'mnemonic' + passphrase
         seed: bytes = hashlib.pbkdf2_hmac(hash_name='sha512', password=mnemonics_in_str.encode('utf-8'),
