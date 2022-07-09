@@ -9,4 +9,4 @@ My learning on internal working of Ethereum
 - From the 256-bit public key, we can generate the wallet address by getting the last 20 bytes (160-bit) of the Keccak-256 hash of the public key.
 - For checksummed wallet address, we hash the hexed wallet address with Keccak-256. If the hashed character is '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' then we uppercase the character.
 
-Using the above, I can generate wallet addresses which end with a chosen suffix :).
+Using the above, I can generate wallet addresses which end with a chosen suffix, for example: 0x02cD888A8109C147C6DAFE42b4bBAF57BeeBFeEd

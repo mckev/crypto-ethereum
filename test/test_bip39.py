@@ -38,3 +38,15 @@ class TestBip39(unittest.TestCase):
         seed: bytes = Bip39.mnemonics_to_seed(mnemonics, passphrase='TREZOR')
         self.assertEqual(seed.hex(),
                          '01f5bced59dec48e362f2c45b5de68b9fd6c92c6634f44d6d40aab69056506f0e35524a518034ddc1192e1dacd32c1ed3eaa3c3b131c88ed8e7e54c49a5d0998')
+
+    def test_generate_random_mnemonics_24_words(self):
+        mnemonics: list[str] = Bip39.generate_random_mnemonics(24)
+        self.assertEqual(len(mnemonics), 24)
+        seed: bytes = Bip39.mnemonics_to_seed(mnemonics)
+        self.assertEqual(len(seed), 64)
+
+    def test_generate_random_mnemonics_12_words(self):
+        mnemonics: list[str] = Bip39.generate_random_mnemonics(12)
+        self.assertEqual(len(mnemonics), 12)
+        seed: bytes = Bip39.mnemonics_to_seed(mnemonics)
+        self.assertEqual(len(seed), 64)

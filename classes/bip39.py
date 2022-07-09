@@ -212,19 +212,17 @@ class Bip39:
         for word in mnemonics:
             index = word_map[word]
             entropy_and_chksum_in_bin += bin(index).lstrip('0b').zfill(11)
-        chksum_len_in_bits: int = len(entropy_and_chksum_in_bin) % 16
-        entropy_len_in_bits: int = len(entropy_and_chksum_in_bin) - chksum_len_in_bits
-        assert chksum_len_in_bits > 0
-        assert entropy_len_in_bits > 0
-        chksum_in_bin: str = entropy_and_chksum_in_bin[-chksum_len_in_bits:]
-        entropy_in_bin: str = entropy_and_chksum_in_bin[:-chksum_len_in_bits]
-        entropy: bytes = int(entropy_in_bin, base=2).to_bytes(entropy_len_in_bits // 8, byteorder='big')
+        chksum_len: int = len(entropy_and_chksum_in_bin) % 32
+        entropy_len: int = len(entropy_and_chksum_in_bin) - chksum_len
+        assert chksum_len > 0
+        assert entropy_len > 0
+        chksum_in_bin: str = entropy_and_chksum_in_bin[-chksum_len:]
+        entropy_in_bin: str = entropy_and_chksum_in_bin[:-chksum_len]
+        entropy: bytes = int(entropy_in_bin, base=2).to_bytes(entropy_len // 8, byteorder='big')
 
         # Verify chksum equals to the first n-bits of SHA256(entropy)
         chksum2: bytes = hashlib.sha256(entropy).digest()
-        chksum2_in_bin: str = ''
-        for b in chksum2:
-            chksum2_in_bin += bin(b).lstrip('0b').zfill(8)
+        chksum2_in_bin: str = Util.bytes_to_bin(chksum2)
         assert chksum2_in_bin.startswith(chksum_in_bin)
 
         # Generate 512-bit seed
@@ -236,17 +234,20 @@ class Bip39:
         return seed
 
     @staticmethod
-    def generate_random_mnemonics_256() -> list[str]:
-        # Generate 256-bit entropy + 8-bit chksum
-        entropy: bytes = secrets.token_bytes(nbytes=32)
+    def generate_random_mnemonics(num_words: int) -> list[str]:
+        assert num_words in [12, 15, 18, 21, 24]
+        entropy_and_chksum_len: int = num_words * 11
+        chksum_len: int = entropy_and_chksum_len % 32
+        entropy_len: int = entropy_and_chksum_len - chksum_len
+        entropy: bytes = secrets.token_bytes(nbytes=entropy_len // 8)
+        entropy_in_bin: str = Util.bytes_to_bin(entropy)
         chksum: bytes = hashlib.sha256(entropy).digest()
-        entropy_and_chksum: bytes = entropy + chksum[0:1]
-        assert len(entropy_and_chksum) == 33
+        chksum_in_bin: str = Util.bytes_to_bin(chksum)
+        entropy_and_chksum_in_bin: str = entropy_in_bin + chksum_in_bin[:chksum_len]
 
         # Generate Mnemonics
-        entropy_and_chksum_in_base2048 = Util.split_bits(entropy_and_chksum, 11)
+        entropy_and_chksum_in_base2048 = Util.split_bits(entropy_and_chksum_in_bin, 11)
         mnemonics: list[str] = []
         for index in entropy_and_chksum_in_base2048:
             mnemonics.append(Bip39.WORDS[index])
-        assert len(mnemonics) == 24
         return mnemonics
